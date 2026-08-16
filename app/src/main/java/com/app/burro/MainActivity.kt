@@ -4,20 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.burro.model.AppScreen
-import com.app.burro.model.GameMode
+import com.app.burro.model.GameState
+import com.app.burro.ui.screens.GameScreen
 import com.app.burro.ui.screens.ModeSelectionScreen
 import com.app.burro.ui.screens.PlayerSetupScreen
+import com.app.burro.ui.screens.WinnerScreen
 import com.app.burro.ui.theme.BURROTheme
 import com.app.burro.viewmodel.GameViewModel
 import com.app.burro.viewmodel.GameViewModelFactory
-import androidx.compose.runtime.collectAsState
-import com.app.burro.ui.screens.GameScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,9 +23,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BURROTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    BurroApp()
-                }
+                BurroApp()
             }
         }
     }
@@ -35,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BurroApp() {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val viewModel: GameViewModel = viewModel(factory = GameViewModelFactory(context))
 
     var pantallaActual by remember { mutableStateOf(AppScreen.PLAYER_SETUP) }
@@ -63,19 +59,27 @@ fun BurroApp() {
         AppScreen.GAME -> {
             val state by viewModel.uiState.collectAsState()
 
-            if (state.estado == com.app.burro.model.GameState.FINISHED) {
+            if (state.estado == GameState.FINISHED) {
                 pantallaActual = AppScreen.WINNER
             } else {
                 GameScreen(
                     uiState = state,
                     onSolicitarTruco = { viewModel.solicitarTruco() },
-                    onResultado = { resultado -> viewModel.registrarResultado(resultado) }
+                    onResultado = { resultado -> viewModel.registrarResultado(resultado) },
+                    onDescartarAvisoEliminacion = { viewModel.descartarAvisoEliminacion() }
                 )
             }
         }
 
         AppScreen.WINNER -> {
-            // TODO: pantalla de victoria
+            val state by viewModel.uiState.collectAsState()
+
+            WinnerScreen(
+                ganador = state.ganador,
+                onNuevaPartida = {
+                    pantallaActual = AppScreen.PLAYER_SETUP
+                }
+            )
         }
     }
 }

@@ -14,6 +14,7 @@ import com.app.burro.model.GameState
 import com.app.burro.model.Player
 import com.app.burro.model.TurnResult
 import com.app.burro.viewmodel.GameUiState
+import androidx.compose.foundation.layout.statusBarsPadding
 
 private const val PALABRA_BURRO = "BURRO"
 
@@ -21,13 +22,27 @@ private const val PALABRA_BURRO = "BURRO"
 fun GameScreen(
     uiState: GameUiState,
     onSolicitarTruco: () -> Unit,
-    onResultado: (TurnResult) -> Unit
+    onResultado: (TurnResult) -> Unit,
+    onDescartarAvisoEliminacion: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(16.dp)
     ) {
+        uiState.jugadorEliminadoAviso?.let { jugadorEliminado ->
+            AlertDialog(
+                onDismissRequest = onDescartarAvisoEliminacion,
+                title = { Text("¡Eliminado!") },
+                text = { Text("${jugadorEliminado.nombre} ha completado BURRO y queda eliminado.") },
+                confirmButton = {
+                    TextButton(onClick = onDescartarAvisoEliminacion) {
+                        Text("Vale")
+                    }
+                }
+            )
+        }
         // Marcador de todos los jugadores
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -72,8 +87,17 @@ fun GameScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Truco actual, o botón para pedirlo
-        if (uiState.truckActualDelTurno == null) {
+        // Truco actual, botón para pedirlo, o aviso de trucos agotados
+        if (uiState.estado == GameState.NO_TRICKS_AVAILABLE) {
+            Text(
+                text = uiState.mensajeFin ?: "No hay más trucos disponibles.",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally),
+                textAlign = TextAlign.Center
+            )
+        } else if (uiState.truckActualDelTurno == null) {
             Button(
                 onClick = onSolicitarTruco,
                 modifier = Modifier

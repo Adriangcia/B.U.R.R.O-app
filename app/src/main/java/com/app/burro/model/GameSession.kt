@@ -10,6 +10,7 @@ enum class GameMode {
 enum class GameState {
     NORMAL,
     SUDDEN_DEATH,
+    NO_TRICKS_AVAILABLE,
     FINISHED
 }
 

@@ -15,7 +15,9 @@ data class GameUiState(
     val jugadoresQueYaIntentaronEsteTruco: Set<Long> = emptySet(),
     val trucosYaUsadosIds: Set<Long> = emptySet(),
     val estado: GameState = GameState.NORMAL,
-    val ganador: Player? = null
+    val ganador: Player? = null,
+    val mensajeFin: String? = null,
+    val jugadorEliminadoAviso: Player? = null
 ) {
     val jugadorActual: Player?
         get() = jugadores.getOrNull(turnoActualIndex)

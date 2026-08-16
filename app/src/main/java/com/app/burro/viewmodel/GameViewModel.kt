@@ -77,21 +77,41 @@ class GameViewModel(context: Context) : ViewModel() {
         return candidatos.last()
     }
 
-    /**
-     * Llamado cuando el jugador actual (iniciador) pulsa el botón TRUCO.
-     */
-    fun solicitarTruco() {
-        val state = _uiState.value
+    private fun candidatosDisponibles(state: GameUiState): List<Trick> {
         val niveles = nivelesDisponibles(state.modo, state.contadorTrucosGlobal)
-
-        val candidatos = niveles.flatMap { nivel ->
+        return niveles.flatMap { nivel ->
             when (nivel) {
                 TrickLevel.BASIC -> poolBasic
                 TrickLevel.MEDIUM -> poolMedium
                 TrickLevel.PRO -> poolPro
             }
         }
+    }
 
+    private fun verificarTrucosDisponibles() {
+        val state = _uiState.value
+        if (state.estado == GameState.FINISHED || state.estado == GameState.NO_TRICKS_AVAILABLE) return
+
+        val candidatos = candidatosDisponibles(state)
+
+        if (candidatos.isEmpty()) {
+            val mensaje = if (state.modo == GameMode.STANDARD) {
+                "Se han agotado todos los trucos disponibles."
+            } else {
+                "Ya no hay más trucos de nivel ${state.modo.name}."
+            }
+            _uiState.update {
+                it.copy(estado = GameState.NO_TRICKS_AVAILABLE, mensajeFin = mensaje)
+            }
+        }
+    }
+
+    /**
+     * Llamado cuando el jugador actual (iniciador) pulsa el botón TRUCO.
+     */
+    fun solicitarTruco() {
+        val state = _uiState.value
+        val candidatos = candidatosDisponibles(state)
         val trickElegido = elegirTrickPonderado(candidatos) ?: return
 
         _uiState.update {
@@ -191,14 +211,20 @@ class GameViewModel(context: Context) : ViewModel() {
 
     private fun actualizarJugador(jugadorActualizado: Player) {
         _uiState.update { state ->
+            val jugadorAntes = state.jugadores.find { it.id == jugadorActualizado.id }
+            val recienEliminado = jugadorAntes?.eliminado == false && jugadorActualizado.eliminado
+
             state.copy(
                 jugadores = state.jugadores.map {
                     if (it.id == jugadorActualizado.id) jugadorActualizado else it
-                }
+                },
+                jugadorEliminadoAviso = if (recienEliminado) jugadorActualizado else state.jugadorEliminadoAviso
             )
         }
     }
-
+    fun descartarAvisoEliminacion() {
+        _uiState.update { it.copy(jugadorEliminadoAviso = null) }
+    }
     /**
      * El iniciador hizo PASAR o FAIL: la ronda termina sin cadena.
      * El siguiente jugador vivo se convierte en el nuevo iniciador.
@@ -216,6 +242,7 @@ class GameViewModel(context: Context) : ViewModel() {
                 jugadoresQueYaIntentaronEsteTruco = emptySet()
             )
         }
+        verificarTrucosDisponibles()
     }
 
     /**
@@ -241,6 +268,7 @@ class GameViewModel(context: Context) : ViewModel() {
                     jugadoresQueYaIntentaronEsteTruco = emptySet()
                 )
             }
+            verificarTrucosDisponibles()
         } else {
             val siguiente = pendientes.first()
             val siguienteIndex = state.jugadores.indexOfFirst { it.id == siguiente.id }
